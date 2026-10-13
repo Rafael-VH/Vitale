@@ -12,7 +12,7 @@ Este documento define la **arquitectura limpia (Clean Architecture)** y la **mod
 
 El repositorio en GitHub tiene esta disposición:
 
-```
+```text
 vitale/
 ├── docs/
 │   ├── SITIOS.md                    # Documentación de sitios soportados
@@ -53,6 +53,7 @@ vitale/
 **Vitale** convierte archivos HTML y MHTML en Markdown limpio, de forma local y sin servidores. La versión web original vive en `prototipe/` y sirve como **referencia funcional completa**. La versión web ya está **modularizada** en 20 archivos JavaScript organizados en capas.
 
 El objetivo del port a Flutter es ofrecer la misma funcionalidad en **Android, iOS y Web**, con:
+
 - Rendimiento nativo al procesar archivos MHTML grandes (Android, iOS).
 - Integración con el sistema de archivos y el menú de compartir del SO (Android, iOS).
 - Uso de la File System Access API o descarga directa (Web).
@@ -65,7 +66,7 @@ El objetivo del port a Flutter es ofrecer la misma funcionalidad en **Android, i
 
 La aplicación sigue **Clean Architecture** con **3 capas** y **feature-first** para el módulo principal:
 
-```
+```text
 Presentation  →  Domain  ←  Data
 ```
 
@@ -88,7 +89,7 @@ Presentation  →  Domain  ←  Data
 
 El agente debe crear y respetar exactamente esta estructura dentro de `lib/`:
 
-```
+```text
 lib/
 ├── main.dart                                   # Punto de entrada, bootstrap de Riverpod
 ├── app.dart                                    # MaterialApp, tema, rutas raíz
@@ -206,11 +207,13 @@ lib/
 **Regla**: ninguna capa importa archivos de una capa superior. `domain` no puede importar `data` ni `presentation`.
 
 **Regla de extensibilidad**: para añadir soporte a un sitio nuevo, solo se debe:
+
 1. Crear un archivo `lib/features/convert/data/extractors/<sitio>_extractor.dart`.
 2. Registrarlo en el `ExtractorRegistryImpl`.
 3. Nada más. El resto del sistema lo detecta automáticamente.
 
 **Regla de extensibilidad (motores de conversión)**: para añadir un motor nuevo, solo se debe:
+
 1. Crear un archivo `lib/features/convert/data/engines/<motor>_engine.dart` que implemente `MarkdownEngine` (§4.8).
 2. Registrarlo en el composition root (§6.5), en el orden de preferencia deseado.
 3. Nada más. El registro lo incluye en la cascada de fallback.
@@ -411,6 +414,7 @@ class ConvertHtmlToMarkdown {
 ```
 
 Los demás casos de uso siguen el mismo patrón:
+
 - `ExtractHtmlFromMhtml` → envuelve `extractHtmlFromMhtml`
 - `ExtractMainContent` → usa `ExtractorRepository.extractMainContent`
 - `DetectSiteFromUrl` → usa `ExtractorRepository.detectFromUrl`
@@ -536,6 +540,7 @@ abstract class MarkdownEngineRegistry {
 ```
 
 Reglas:
+
 - La **presentación nunca importa un motor concreto**: depende solo de `MarkdownEngineRegistry`.
 - El **orden de preferencia** lo define el registro (§5.3); el usuario puede sobreescribirlo con `preferred`.
 - La **cascada** es automática: `Err` o salida vacía → probar el siguiente motor.
@@ -598,7 +603,7 @@ Cada motor implementa el puerto `MarkdownEngine` (§4.8). El registro `MarkdownE
 #### 5.3.1. Motores recomendados
 
 | EngineId | Implementación (data/engines) | Plataforma | Estado | Notas |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | `html2md` | `html2md_engine.dart` | **Web, Android, iOS** | **Recomendado (por defecto)** | Paquete Dart puro: `package:html2md`. Cubre "Dart puro en 3 plataformas" sin código condicional. Fuentes de la tabla de opciones = filas de la spec (punto 6). Firma: `String convert(Object input, {Map<String,String>? styleOptions,...})`. |
 | `mdreamJs` | `mdream_js_engine.dart` | **Web** | **Opcional (futuro)** | Envoltorio a `@mdream/js` importado vía `package:web`/JS interop. Solo disponible en Web. Úsalo si se quiere acercar al output exacto del prototipo. |
 | `htmlToMarkdownRs` | `html_to_markdown_rs_engine.dart` | **Android, iOS** | **Opcional (futuro)** | Envoltorio a `html_to_markdown_rust`/`h2m` vía FFI. Solo móvil. Requiere prebuilt nativos. Reservado, **no bloqueante**. |
@@ -606,7 +611,7 @@ Cada motor implementa el puerto `MarkdownEngine` (§4.8). El registro `MarkdownE
 #### 5.3.2. Orden por defecto y cascada
 
 - **Defecto**: `html2md` primero (Dart puro, multi-plataforma).
-- **Fallback**: si `html2md` no está disponible o falla para ese HTML, caer a un motor específico de plataforma (si existe y está disponible). 
+- **Fallback**: si `html2md` no está disponible o falla para ese HTML, caer a un motor específico de plataforma (si existe y está disponible).
 - **Cascada**: si **todos** fallan → `AllEnginesFailedFailure`.
 - La UI permite cambiar el `preferredEngine` (persistido en `SharedPreferences`), pero el fallback siempre ocurre.
 
@@ -761,7 +766,7 @@ El `Extractor` base proporciona una implementación por defecto de `extract` que
 **Extractores a portar** (uno por archivo, espejo de `prototipe/js/extractors/`):
 
 | Archivo | SiteKey | Dominios | Selectores |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `fanfiction_extractor.dart` | `fanfiction` | `fanfiction.net`, `m.fanfiction.net` | `#storycontent` + custom regex |
 | `ao3_extractor.dart` | `ao3` | `archiveofourown.org` | `#chapters .userstuff.module`, `#chapters .userstuff`, `#workskin .userstuff.module`, `.userstuff.module`, `.userstuff` |
 | `webnovel_extractor.dart` | `webnovel` | `webnovel.com` | `.cha-content`, `.cha-words`, `#chapter-content`, `.chapter-content` |
@@ -837,7 +842,7 @@ Puerto de `extractGeneric` del JS. Prueba patrones amplios con regex sobre cualq
 
 Orquesta el flujo completo:
 
-```
+```text
 SourceInput
   ↓ (si es FileInput)
 CharsetDetector.readFileSmart() → decodifica el archivo
@@ -864,7 +869,7 @@ Debido a que las APIs de archivos difieren radicalmente entre móvil y web, el r
 #### 5.9.1. `FileRepositoryMobile` (Android + iOS)
 
 - `pickFile`: usar `file_picker` con filtros de extensión.
-- `saveMarkdown`: 
+- `saveMarkdown`:
   1. Obtener directorio destino con `path_provider`. Usar `getApplicationDocumentsDirectory()` en iOS y `getDownloadsDirectory()` o `getExternalStorageDirectory()` en Android.
   2. **Prepend BOM UTF-8** al contenido (bytes `[0xEF, 0xBB, 0xBF]`).
   3. Escribir bytes con `File.writeAsBytes`.
@@ -873,7 +878,7 @@ Debido a que las APIs de archivos difieren radicalmente entre móvil y web, el r
 #### 5.9.2. `FileRepositoryWeb`
 
 - `pickFile`: usar `file_picker` (que ya soporta web). Alternativamente usar `package:web` con `HTMLInputElement`.
-- `saveMarkdown`: 
+- `saveMarkdown`:
   1. Crear el contenido como `List<int>` con BOM.
   2. Usar `package:web` para crear un `Blob` y un `URL.createObjectURL`.
   3. Crear un `<a>` con `download = filename` y disparar `click()`.
@@ -927,6 +932,7 @@ abstract class CharsetDetector {
 ```
 
 Detección en orden:
+
 1. BOM (`UTF-8`, `UTF-16 LE/BE`) si está presente.
 2. `<meta charset>` / `<meta http-equiv="Content-Type">` en los primeros bytes.
 3. Fallback a UTF-8.
@@ -1031,7 +1037,7 @@ Riverpod **es** el mecanismo de inyección de dependencias del proyecto. El ensa
 
 Cadena de dependencias (interfaz → implementación, nunca al revés):
 
-```
+```text
 MarkdownEngineRegistry  ←  [Html2mdEngine, MdreamJsEngine?, HtmlToMarkdownRsEngine?]  (orden configurable)
 MhtmlParserDataSource
 SiteDetectorDataSource
@@ -1073,6 +1079,7 @@ final convertHtmlToMarkdownProvider = Provider<ConvertHtmlToMarkdown>((ref) {
 ```
 
 Reglas:
+
 - Cada clase recibe sus dependencias por constructor; el wiring vive en providers, no dentro de las clases.
 - `main.dart` sólo crea el `ProviderScope`; `app.dart` arma `MaterialApp`.
 - En tests, inyectar fakes con `ProviderScope(overrides: [...])` y `ProviderContainer.test()`.
@@ -1100,7 +1107,7 @@ Expuesto como `Provider<PlatformKind>` para que los widgets lo consuman reactiva
 ### Diferencias por plataforma a manejar
 
 | Aspecto | Android | iOS | Web |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Selección de archivo | `file_picker` | `file_picker` | `file_picker` (input file) |
 | Guardar `.md` | Escribir en disco + notificación | Escribir en Documents | Descarga directa |
 | Compartir | `share_plus` | `share_plus` | Web Share API o descarga |
