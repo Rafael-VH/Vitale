@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'features/convert/presentation/pages/home_page.dart';
+
 void main() {
   runApp(const ProviderScope(child: VitaleApp()));
 }
@@ -17,22 +19,6 @@ class VitaleApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const HomePage(),
-    );
-  }
-}
-
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Vitale'),
-      ),
-      body: const Center(
-        child: Text('Vitale - Conversión HTML/MHTML a Markdown'),
-      ),
     );
   }
 }
