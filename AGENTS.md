@@ -13,7 +13,7 @@ Vitale convierte archivos **HTML y MHTML en Markdown limpio**, 100% local en el 
 ## Dos bases de código
 
 | Ruta | Qué es | Rol |
-|---|---|---|
+| --- | --- | --- |
 | `prototipe/` | Versión web original (HTML + CSS + JS vanilla, 20 archivos modulares) | **Referencia funcional**. La fuente de verdad del comportamiento. |
 | `lib/` | App **Flutter** (Android, iOS, Web) — Clean Architecture | El objetivo: portar la misma funcionalidad. |
 | `docs/` | Documentación markdown (SITIOS, ARQUITECTURA, ROADMAP, CONTRIBUTING) | Docs del proyecto. |
@@ -35,7 +35,7 @@ Si hay conflicto: gana el prototipo en lo funcional y la especificación en lo a
 
 **Clean Architecture, 3 capas, feature-first.** Regla de dependencia estricta:
 
-```
+```text
 Presentation  →  Domain  ←  Data
 ```
 
