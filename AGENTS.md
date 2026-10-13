@@ -66,9 +66,12 @@ El sistema detecta el sitio desde la URL del MHTML, aplica el extractor y cae al
 
 ## Estado actual (2026-10-13)
 
-- `lib/main.dart` es **todavía la plantilla default** de Flutter (contador). No hay código real de la app aún.
-- `pubspec.yaml` solo tiene `cupertino_icons` + `flutter_lints`. Las dependencias de la especificación (`file_picker`, `path_provider`, `share_plus`, `html`, `html_unescape`, `flutter_riverpod`, `web` + motor HTML→MD) **todavía no están instaladas**.
-- El motor de conversión del prototipo es **mdream** (Rust/WASM). Para Flutter, la spec §5.3 recomienda un paquete Dart puro (ej. `html2md` o `turndown_dart`).
+- App Flutter con **esqueleto funcional** en `lib/` (Clean Architecture: `core/`, `features/convert/{domain,data,presentation}/`). `lib/main.dart` arranca `VitaleApp` con `ProviderScope` y una `HomePage` mínima (pegar/elegir archivo → convertir → ver Markdown).
+- Gestión de estado: **Riverpod 3.x** (`flutter_riverpod ^3.4.3`), sin codegen.
+- Dependencias instaladas: `flutter_riverpod`, `file_picker ^13.1.0`, `web`, `html2md ^1.3.2` (motor por defecto), `charset_converter ^2.5.1` (charsets no-UTF-8).
+- Motores de conversión: `html2md` (default, disponible); `mdreamJs` y `htmlToMarkdownRs` reservados como stubs no disponibles. Cascada en `MarkdownEngineRegistryImpl`.
+- Charset: `CharsetDetector`/`CharsetDetectorImpl` (`Future<String> decode(...)`, asíncrono por la API de `charset_converter`).
+- Pendiente: extractores reales por sitio (hoy stubs/fallback genérico), extracción de `originUrl` del MHTML, BOM + `<meta charset>` en `CharsetDetectorImpl`, más tests.
 
 Antes de añadir una dependencia que no esté en la lista de la spec, **listala y pedí confirmación**.
 
@@ -79,7 +82,7 @@ Antes de añadir una dependencia que no esté en la lista de la spec, **listala 
 1. **Archivos**: `snake_case.dart`. Un archivo = una responsabilidad.
 2. **Clases**: `PascalCase`. Casos de uso en infinitivo: `ConvertHtmlToMarkdown`.
 3. **Variables/métodos**: `camelCase`. Privados con `_`.
-4. **Imports**: agrupados `dart:` → `package:` → relativos, separados por línea en blanco.
+4. **Imports**: agrupados `dart:` → `package:`, separados por línea en blanco. Los archivos internos usan **ruta completa** (`package:vitale/...`); **sin imports relativos** (`../`, `./`).
 5. **Errores**: usar `sealed class` para estados; `throw` solo para errores de programación.
 6. **Docstrings** `///` en toda clase y método público.
 7. **Linter**: `flutter_lints` + reglas estrictas. `flutter analyze` sin warnings.

@@ -920,8 +920,9 @@ Contrato:
 ```dart
 // lib/core/utils/charset_detector.dart
 abstract class CharsetDetector {
-  /// Decodifica bytes a texto detectando el charset (BOM → <meta charset> → UTF-8).
-  String decode(List<int> bytes);
+  /// Decodifica bytes a texto detectando el charset (UTF-8 → charsets conocidos → UTF-8 tolerante).
+  /// Asíncrono porque el fallback no-UTF-8 usa charset_converter (Future&lt;String&gt;).
+  Future<String> decode(List<int> bytes);
 }
 ```
 
@@ -1271,5 +1272,5 @@ Se considera la migración completada cuando:
 
 Decisiones **abiertas** que bloquean partes de la implementación. Cerrarlas (y registrarlas en `AGENTS.md`) antes de codear la capa afectada.
 
-- [ ] **Motor HTML→Markdown (§5.3).** Decidir qué motores usar (mínimo `html2md` como por defecto + opcionales), pinear versiones, definir orden de cascada y si persistir la selección del usuario. Bloquea `MarkdownEngineRegistry` y la capa Data.
-- **Soporte de charsets no-UTF-8 (§5.11).** Decidir entre `package:charset_converter` u otro paquete Dart puro para `windows-1252`, `windows-1251`, `shift_jis`, `euc-jp`, `gbk`, `big5`, `koi8-r` (o recortar el soporte), pinear versión y actualizar README si aplica. Bloquea `CharsetDetector`.
+- [x] **Motor HTML→Markdown (§5.3).** Decidido: `html2md` (Dart puro) como motor por defecto; `mdreamJs`/`htmlToMarkdownRs` reservados como stubs no disponibles. Cascada implementada en `MarkdownEngineRegistryImpl`.
+- [x] **Soporte de charsets no-UTF-8 (§5.11).** Decidido: `package:charset_converter` **^2.5.1**. Implementado en `CharsetDetectorImpl` (`charset_detector.dart`). Contrato `Future<String> decode(...)` (asíncrono por la API del paquete).
