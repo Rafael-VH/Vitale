@@ -1,5 +1,5 @@
 // lib/features/convert/domain/entities/conversion_result.dart
-import 'engine_info.dart';
+import 'package:vitale/features/convert/domain/entities/engine_info.dart';
 
 enum SiteKey {
   fanfiction,

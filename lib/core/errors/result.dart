@@ -1,4 +1,4 @@
-import 'failures.dart';
+import 'package:vitale/core/errors/failures.dart';
 
 sealed class Result<T> {
   const Result();

@@ -1,5 +1,5 @@
 // lib/features/convert/domain/extractors/extractor_registry.dart
-import '../entities/conversion_result.dart';
+import 'package:vitale/features/convert/domain/entities/conversion_result.dart';
 
 abstract class ExtractorRegistry {
   SiteKey detectSiteKey(String? originUrl, String html);

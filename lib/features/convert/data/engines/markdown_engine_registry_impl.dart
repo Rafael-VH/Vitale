@@ -1,9 +1,9 @@
 // lib/features/convert/data/engines/markdown_engine_registry_impl.dart
-import '../../../../core/errors/failures.dart';
-import '../../../../core/errors/result.dart';
-import '../../domain/entities/engine_info.dart';
-import '../../domain/engines/markdown_engine.dart';
-import '../../domain/engines/markdown_engine_registry.dart';
+import 'package:vitale/core/errors/failures.dart';
+import 'package:vitale/core/errors/result.dart';
+import 'package:vitale/features/convert/domain/entities/engine_info.dart';
+import 'package:vitale/features/convert/domain/engines/markdown_engine.dart';
+import 'package:vitale/features/convert/domain/engines/markdown_engine_registry.dart';
 
 class MarkdownEngineRegistryImpl implements MarkdownEngineRegistry {
   final List<MarkdownEngine> _engines;

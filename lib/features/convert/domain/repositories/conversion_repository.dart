@@ -1,8 +1,8 @@
 // lib/features/convert/domain/repositories/conversion_repository.dart
-import '../../../../core/errors/result.dart';
-import '../entities/conversion_result.dart';
-import '../entities/engine_info.dart';
-import '../entities/source_input.dart';
+import 'package:vitale/core/errors/result.dart';
+import 'package:vitale/features/convert/domain/entities/conversion_result.dart';
+import 'package:vitale/features/convert/domain/entities/engine_info.dart';
+import 'package:vitale/features/convert/domain/entities/source_input.dart';
 
 abstract class ConversionRepository {
   Future<Result<ConversionResult>> convert(SourceInput input, {EngineId? preferredEngine});
@@ -30,5 +30,3 @@ class PreparedHtml {
     this.info,
   });
 }
-import '../entities/conversion_result.dart';
-import '../entities/source_input.dart';

@@ -1,8 +1,8 @@
 // lib/features/convert/data/extractors/extractor_registry_impl.dart
-import '../../domain/entities/conversion_result.dart';
-import '../../domain/extractors/extractor_registry.dart';
-import '../../domain/extractors/site_extractor.dart';
-import 'generic_extractor.dart';
+import 'package:vitale/features/convert/domain/entities/conversion_result.dart';
+import 'package:vitale/features/convert/domain/extractors/extractor_registry.dart';
+import 'package:vitale/features/convert/domain/extractors/site_extractor.dart';
+import 'package:vitale/features/convert/data/extractors/generic_extractor.dart';
 
 class ExtractorRegistryImpl implements ExtractorRegistry {
   final List<SiteExtractor> _extractors;

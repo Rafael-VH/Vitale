@@ -1,16 +1,16 @@
 // lib/features/convert/presentation/controllers/providers.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/datasources/mhtml_parser.dart';
-import '../../data/engines/html2md_engine.dart';
-import '../../data/engines/markdown_engine_registry_impl.dart';
-import '../../data/extractors/extractor_registry_impl.dart';
-import '../../data/repositories/conversion_repository_impl.dart';
-import '../../domain/engines/markdown_engine.dart';
-import '../../domain/engines/markdown_engine_registry.dart';
-import '../../domain/extractors/extractor_registry.dart';
-import '../../domain/repositories/conversion_repository.dart';
-import '../../domain/usecases/convert_html_to_markdown.dart';
+import 'package:vitale/features/convert/data/datasources/mhtml_parser.dart';
+import 'package:vitale/features/convert/data/engines/html2md_engine.dart';
+import 'package:vitale/features/convert/data/engines/markdown_engine_registry_impl.dart';
+import 'package:vitale/features/convert/data/extractors/extractor_registry_impl.dart';
+import 'package:vitale/features/convert/data/repositories/conversion_repository_impl.dart';
+import 'package:vitale/features/convert/domain/engines/markdown_engine.dart';
+import 'package:vitale/features/convert/domain/engines/markdown_engine_registry.dart';
+import 'package:vitale/features/convert/domain/extractors/extractor_registry.dart';
+import 'package:vitale/features/convert/domain/repositories/conversion_repository.dart';
+import 'package:vitale/features/convert/domain/usecases/convert_html_to_markdown.dart';
 
 final mhtmlParserProvider = Provider<MhtmlParser>((ref) => MhtmlParser());
 final enginesProvider = Provider<List<MarkdownEngine>>((ref) => [Html2mdEngine()]);
