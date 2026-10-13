@@ -1,15 +1,13 @@
 // lib/features/convert/presentation/pages/home_page.dart
-import 'dart:typed_data';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/errors/result.dart';
-import '../../domain/entities/conversion_result.dart';
-import '../../domain/entities/engine_info.dart';
-import '../../domain/entities/source_input.dart';
-import '../controllers/providers.dart';
+import 'package:vitale/core/errors/result.dart';
+import 'package:vitale/features/convert/domain/entities/conversion_result.dart';
+import 'package:vitale/features/convert/domain/entities/engine_info.dart';
+import 'package:vitale/features/convert/domain/entities/source_input.dart';
+import 'package:vitale/features/convert/presentation/controllers/providers.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -26,10 +24,12 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Future<void> _pickFile() async {
     try {
-      final res = await FilePicker.platform.pickFiles(withData: true);
-      if (res == null || res.files.isEmpty) return;
-      final f = res.files.first;
-      final bytes = f.bytes ?? Uint8List(0);
+      final f = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: ['html', 'htm', 'mhtml'],
+      );
+      if (f == null) return;
+      final bytes = await f.readAsBytes();
       final input = FileInput(path: f.path ?? '', filename: f.name, bytes: bytes);
       await _convert(input);
     } catch (e) {
