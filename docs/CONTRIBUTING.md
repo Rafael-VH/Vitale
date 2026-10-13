@@ -67,7 +67,7 @@ Es la contribución más común y la más sencilla. Consulta [docs/SITIOS.md](SI
 
 Resumen:
 
-1. Crea `docs/web/js/extractors/mi-sitio.js`.
+1. Crea `prototipe/js/extractors/mi-sitio.js`.
 2. Regístralo con `Vitale.extractors.register()`.
 3. Añade una línea al `index.html`.
 4. Prueba con un MHTML real del sitio.
@@ -147,7 +147,7 @@ Si necesitas MHTML de prueba, puedes generarlos tú mismo:
 1. Abre un artículo en Chrome.
 2. Pulsa `Ctrl+S`.
 3. Elige **"Página web, un solo archivo"**.
-4. Guarda el `.mhtml` en `docs/web/tests/fixtures/`.
+4. Guarda el `.mhtml` en `prototipe/tests/fixtures/`.
 
 No subas MHTML con contenido sensible al repositorio.
 

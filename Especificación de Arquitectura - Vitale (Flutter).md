@@ -18,20 +18,20 @@ vitale/
 │   ├── SITIOS.md                    # Documentación de sitios soportados
 │   ├── ARQUITECTURA.md              # Arquitectura de la versión web
 │   ├── ROADMAP.md                   # Roadmap del proyecto
-│   ├── CONTRIBUTING.md              # Guía de contribución
-│   └── web/                         # Versión web original
-│       ├── index.html
-│       ├── styles.css
-│       └── js/
-│           ├── core/                # utils.js, mhtml-parser.js, charset.js
-│           ├── extractors/          # registry, base + un archivo por sitio
-│           ├── platform.js
-│           ├── site-detector.js
-│           ├── mdream-loader.js
-│           ├── download-modal.js
-│           ├── convert-panel.js
-│           ├── assist-panel.js
-│           └── main.js
+│   └── CONTRIBUTING.md              # Guía de contribución
+├── prototipe/                       # Versión web original (referencia funcional)
+│   ├── index.html
+│   ├── styles.css
+│   └── js/
+│       ├── core/                    # utils.js, mhtml-parser.js, charset.js
+│       ├── extractors/              # registry, base + un archivo por sitio
+│       ├── platform.js
+│       ├── site-detector.js
+│       ├── mdream-loader.js
+│       ├── download-modal.js
+│       ├── convert-panel.js
+│       ├── assist-panel.js
+│       └── main.js
 ├── lib/                             # Código Dart de la app Flutter
 ├── test/                            # Tests de la app Flutter
 ├── android/                         # Proyecto Android
@@ -44,13 +44,13 @@ vitale/
 └── AGENTS.md                        # Contexto para agentes de IA
 ```
 
-**Nota para el agente**: cuando este documento mencione "`index.html`" como referencia funcional, se refiere a **`docs/web/index.html`** y sus archivos JS asociados en **`docs/web/js/`**. Todas las rutas de código (`lib/...`) son relativas a la **raíz del repositorio**.
+**Nota para el agente**: cuando este documento mencione "`index.html`" como referencia funcional, se refiere a **`prototipe/index.html`** y sus archivos JS asociados en **`prototipe/js/`**. Todas las rutas de código (`lib/...`) son relativas a la **raíz del repositorio**.
 
 ---
 
 ## 1. Objetivo del Proyecto
 
-**Vitale** convierte archivos HTML y MHTML en Markdown limpio, de forma local y sin servidores. La versión web original vive en `docs/web/` y sirve como **referencia funcional completa**. La versión web ya está **modularizada** en 20 archivos JavaScript organizados en capas.
+**Vitale** convierte archivos HTML y MHTML en Markdown limpio, de forma local y sin servidores. La versión web original vive en `prototipe/` y sirve como **referencia funcional completa**. La versión web ya está **modularizada** en 20 archivos JavaScript organizados en capas.
 
 El objetivo del port a Flutter es ofrecer la misma funcionalidad en **Android, iOS y Web**, con:
 - Rendimiento nativo al procesar archivos MHTML grandes (Android, iOS).
@@ -403,11 +403,11 @@ Los demás casos de uso siguen el mismo patrón:
 
 ## 5. Implementación de la Capa Data
 
-El agente debe implementar aquí toda la lógica que en `docs/web/js/` está en JavaScript. Los **nombres de las funciones y su comportamiento** se mantienen para facilitar la trazabilidad con el original.
+El agente debe implementar aquí toda la lógica que en `prototipe/js/` está en JavaScript. Los **nombres de las funciones y su comportamiento** se mantienen para facilitar la trazabilidad con el original.
 
 ### 5.1. `MhtmlParserDataSource`
 
-Puerto directo de `docs/web/js/core/mhtml-parser.js`. Detalles importantes:
+Puerto directo de `prototipe/js/core/mhtml-parser.js`. Detalles importantes:
 
 - Detectar cabecera `Content-Type: multipart/related` y `boundary=`.
 - Si no hay boundary, buscar el primer `<!DOCTYPE html` o `<html>`.
@@ -435,7 +435,7 @@ class MhtmlExtractionResult {
 
 ### 5.2. `SiteDetectorDataSource`
 
-Puerto de `docs/web/js/site-detector.js`. Extrae la URL original del MHTML probando en orden:
+Puerto de `prototipe/js/site-detector.js`. Extrae la URL original del MHTML probando en orden:
 
 1. Cabecera `Snapshot-Content-Location` (Chrome, Edge, Brave, Vivaldi).
 2. Cabecera `Content-Location` que sea `http`/`https`.
@@ -524,7 +524,7 @@ El `Extractor` base proporciona una implementación por defecto de `extract` que
 4. Si ningún selector funciona, llama a `customExtract(html)`.
 5. Si devuelve null, el flujo cae al extractor genérico.
 
-**Extractores a portar** (uno por archivo, espejo de `docs/web/js/extractors/`):
+**Extractores a portar** (uno por archivo, espejo de `prototipe/js/extractors/`):
 
 | Archivo | SiteKey | Dominios | Selectores |
 |---|---|---|---|
@@ -540,7 +540,7 @@ Cada extractor se registra en el `ExtractorRegistryImpl` en su método `register
 
 ### 5.6. `ExtractorRegistryImpl`
 
-Puerto de `docs/web/js/extractors/registry.js` y `base.js`. Mantiene un `Map<SiteKey, Extractor>`.
+Puerto de `prototipe/js/extractors/registry.js` y `base.js`. Mantiene un `Map<SiteKey, Extractor>`.
 
 ```dart
 class ExtractorRegistryImpl implements ExtractorRepository {
@@ -864,22 +864,22 @@ Si falta alguna, el agente debe **listarla explícitamente en su respuesta antes
 
 ## 12. Referencia Funcional
 
-La **fuente de verdad funcional** es el conjunto de archivos en `docs/web/`. El agente debe consultarlos para:
+La **fuente de verdad funcional** es el conjunto de archivos en `prototipe/`. El agente debe consultarlos para:
 
-- **`docs/web/js/core/mhtml-parser.js`** → comportamiento exacto del parser MHTML (§5.1).
-- **`docs/web/js/core/charset.js`** → detección de charset (§5.8).
-- **`docs/web/js/core/utils.js`** → funciones de descarga, portapapeles y BOM UTF-8.
-- **`docs/web/js/site-detector.js`** → extracción de URL original y `prepareHTML` (§5.2).
-- **`docs/web/js/extractors/registry.js`** → comportamiento del registro (§5.6).
-- **`docs/web/js/extractors/base.js`** → lógica de extracción por selectores y fallback (§5.7).
-- **`docs/web/js/extractors/<sitio>.js`** → selectores exactos por sitio (§5.5).
-- **`docs/web/js/convert-panel.js`** → flujo completo del tab principal (§6.3).
-- **`docs/web/js/assist-panel.js`** → flujo del asistente de URLs.
-- **`docs/web/js/download-modal.js`** → comportamiento del modal de descarga.
-- **`docs/web/js/platform.js`** → textos e instrucciones por plataforma (§7).
-- **`docs/web/js/main.js`** → orden de inicialización.
-- **`docs/web/index.html`** → estructura HTML, IDs de elementos, orden de carga.
-- **`docs/web/styles.css`** → colores, espaciados, jerarquía visual del tema (§6.4).
+- **`prototipe/js/core/mhtml-parser.js`** → comportamiento exacto del parser MHTML (§5.1).
+- **`prototipe/js/core/charset.js`** → detección de charset (§5.8).
+- **`prototipe/js/core/utils.js`** → funciones de descarga, portapapeles y BOM UTF-8.
+- **`prototipe/js/site-detector.js`** → extracción de URL original y `prepareHTML` (§5.2).
+- **`prototipe/js/extractors/registry.js`** → comportamiento del registro (§5.6).
+- **`prototipe/js/extractors/base.js`** → lógica de extracción por selectores y fallback (§5.7).
+- **`prototipe/js/extractors/<sitio>.js`** → selectores exactos por sitio (§5.5).
+- **`prototipe/js/convert-panel.js`** → flujo completo del tab principal (§6.3).
+- **`prototipe/js/assist-panel.js`** → flujo del asistente de URLs.
+- **`prototipe/js/download-modal.js`** → comportamiento del modal de descarga.
+- **`prototipe/js/platform.js`** → textos e instrucciones por plataforma (§7).
+- **`prototipe/js/main.js`** → orden de inicialización.
+- **`prototipe/index.html`** → estructura HTML, IDs de elementos, orden de carga.
+- **`prototipe/styles.css`** → colores, espaciados, jerarquía visual del tema (§6.4).
 
 Cuando exista ambigüedad entre esta especificación y la versión web, **prevalece la versión web** en lo funcional, y esta especificación en lo arquitectónico.
 
@@ -891,7 +891,7 @@ Se considera la migración completada cuando:
 
 ### Funcionalidad
 
-- [ ] Todas las funciones de `docs/web/` están disponibles en Android, iOS y Web.
+- [ ] Todas las funciones de `prototipe/` están disponibles en Android, iOS y Web.
 - [ ] La conversión de un MHTML de Fanfiction produce el mismo Markdown que la versión web.
 - [ ] Los archivos `.md` descargados respetan el BOM UTF-8 y muestran acentos correctos en cualquier visor.
 - [ ] En Web, la descarga del `.md` funciona en Chrome, Firefox y Safari.

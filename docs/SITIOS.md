@@ -48,7 +48,7 @@ Añadir un sitio es **crear un archivo y registrarlo**. No hay que tocar nada m�
 
 ### Paso 1: crear el archivo del extractor
 
-Crea `docs/web/js/extractors/mi-sitio.js` con este contenido:
+Crea `prototipe/js/extractors/mi-sitio.js` con este contenido:
 
 ```javascript
 /* ============================================================================
@@ -66,7 +66,7 @@ Vitale.extractors.register('mi-sitio', {
 
 ### Paso 2: añadirlo al index.html
 
-En `docs/web/index.html`, añade una línea junto a los demás extractores:
+En `prototipe/index.html`, añade una línea junto a los demás extractores:
 
 ```html
 <script src="js/extractors/mi-sitio.js"></script>

@@ -72,19 +72,19 @@ Está pensada para tres casos de uso principales:
 ```bash
 git clone https://github.com/tu-usuario/vitale.git
 cd vitale
-# Abre docs/web/index.html en tu navegador
+# Abre prototipe/index.html en tu navegador
 ```
 
 ### Opción 2: descargar el ZIP
 
-Ve a la sección **Releases** del repositorio, descarga el ZIP más reciente, descomprímelo y abre `docs/web/index.html` con doble clic.
+Ve a la sección **Releases** del repositorio, descarga el ZIP más reciente, descomprímelo y abre `prototipe/index.html` con doble clic.
 
 ### Servidor local (recomendado para desarrollo)
 
 Si vas a modificar el código, sirve la carpeta con un servidor local:
 
 ```bash
-cd docs/web
+cd prototipe
 python -m http.server 8000
 # Abre http://localhost:8000/ en tu navegador
 ```

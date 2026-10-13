@@ -9,7 +9,7 @@ Vitale está organizado en módulos pequeños con una responsabilidad clara cada
 ## Estructura de carpetas
 
 ```
-docs/web/
+prototipe/
 ├── index.html                      ← Estructura HTML + carga de scripts
 ├── styles.css                      ← Hoja de estilos única y centralizada
 └── js/
