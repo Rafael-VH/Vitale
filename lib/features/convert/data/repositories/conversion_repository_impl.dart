@@ -1,24 +1,28 @@
 // lib/features/convert/data/repositories/conversion_repository_impl.dart
-import '../../../../core/errors/failures.dart';
-import '../../../../core/errors/result.dart';
-import '../../domain/entities/conversion_result.dart';
-import '../../domain/entities/engine_info.dart';
-import '../../domain/entities/source_input.dart';
-import '../../domain/engines/markdown_engine_registry.dart';
-import '../../domain/extractors/extractor_registry.dart';
-import '../../domain/repositories/conversion_repository.dart';
-import '../datasources/mhtml_parser.dart';
-import '../../../../core/utils/charset_helper.dart';
+import 'package:vitale/core/errors/failures.dart';
+import 'package:vitale/core/errors/result.dart';
+import 'package:vitale/features/convert/domain/entities/conversion_result.dart';
+import 'package:vitale/features/convert/domain/entities/engine_info.dart';
+import 'package:vitale/features/convert/domain/entities/source_input.dart';
+import 'package:vitale/features/convert/domain/engines/markdown_engine_registry.dart';
+import 'package:vitale/features/convert/domain/extractors/extractor_registry.dart';
+import 'package:vitale/features/convert/domain/repositories/conversion_repository.dart';
+import 'package:vitale/features/convert/data/datasources/mhtml_parser.dart';
+import 'package:vitale/core/utils/charset_detector.dart';
+import 'package:vitale/core/utils/charset_detector_impl.dart';
 
 class ConversionRepositoryImpl implements ConversionRepository {
   final MarkdownEngineRegistry engineRegistry;
   final ExtractorRegistry extractorRegistry;
   final MhtmlParser mhtmlParser;
+  final CharsetDetector charsetDetector;
   ConversionRepositoryImpl({
     required this.engineRegistry,
     required this.extractorRegistry,
     MhtmlParser? mhtmlParser,
-  }) : mhtmlParser = mhtmlParser ?? MhtmlParser();
+    CharsetDetector? charsetDetector,
+  })  : mhtmlParser = mhtmlParser ?? MhtmlParser(),
+        charsetDetector = charsetDetector ?? CharsetDetectorImpl();
 
   @override
   Future<Result<ConversionResult>> convert(SourceInput input, {EngineId? preferredEngine}) async {
@@ -30,7 +34,7 @@ class ConversionRepositoryImpl implements ConversionRepository {
     final filteredHtml = extractorRegistry.extractContent(baseHtml, originUrl: null);
     if (filteredHtml.trim().isEmpty) return Err(EmptyInputFailure());
     final res = engineRegistry.convert(filteredHtml, preferred: preferredEngine);
-    if (res is Err<EngineOutput>) return Err((res as Err<EngineOutput>).failure);
+    if (res is Err<EngineOutput>) return Err(res.failure);
     final out = (res as Ok<EngineOutput>).value;
     return Ok(ConversionResult(
       markdown: out.markdown,
@@ -71,6 +75,6 @@ class ConversionRepositoryImpl implements ConversionRepository {
   }
 
   Future<String> _decode(List<int> bytes) async {
-    return await CharsetHelper.decode(bytes);
+    return await charsetDetector.decode(bytes);
   }
 }
