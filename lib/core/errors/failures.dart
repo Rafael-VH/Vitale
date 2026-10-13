@@ -9,7 +9,7 @@ class MhtmlParseFailure extends Failure {
 }
 
 class EmptyInputFailure extends Failure {
-  const EmptyInputFailure([super.message = 'El contenido está vacío.']);
+  const EmptyInputFailure([super.message = 'El contenido estÃ¡ vacÃ­o.']);
 }
 
 class UnsupportedFormatFailure extends Failure {
@@ -17,7 +17,7 @@ class UnsupportedFormatFailure extends Failure {
 }
 
 class ConversionFailure extends Failure {
-  const ConversionFailure([super.message = 'Falló la conversión a Markdown.']);
+  const ConversionFailure([super.message = 'FallÃ³ la conversiÃ³n a Markdown.']);
 }
 
 class FileReadFailure extends Failure {
@@ -29,9 +29,9 @@ class SaveFailure extends Failure {
 }
 
 class EngineUnavailableFailure extends Failure {
-  const EngineUnavailableFailure([super.message = 'No hay ningún motor de conversión disponible en esta plataforma.']);
+  const EngineUnavailableFailure([super.message = 'No hay ningÃºn motor de conversiÃ³n disponible en esta plataforma.']);
 }
 
 class AllEnginesFailedFailure extends Failure {
-  const AllEnginesFailedFailure([super.message = 'Ningún motor pudo convertir el contenido.']);
+  const AllEnginesFailedFailure([super.message = 'NingÃºn motor pudo convertir el contenido.']);
 }
