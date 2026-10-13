@@ -3,11 +3,11 @@
 **Convierte cualquier HTML o MHTML en Markdown limpio, directamente en el navegador.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-5eead4.svg?style=flat-square)](LICENSE)
-[![Sin dependencias](https://img.shields.io/badge/dependencias-0-818cf8.svg?style=flat-square)](#)
-[![Offline-first](https://img.shields.io/badge/offline--first-sí-34d399.svg?style=flat-square)](#)
-[![Optimizado para LLMs](https://img.shields.io/badge/optimizado%20para-LLMs-a78bfa.svg?style=flat-square)](#)
+![Sin dependencias](https://img.shields.io/badge/dependencias-0-818cf8.svg?style=flat-square)
+![Offline-first](https://img.shields.io/badge/offline--first-sí-34d399.svg?style=flat-square)
+![Optimizado para LLMs](https://img.shields.io/badge/optimizado%20para-LLMs-a78bfa.svg?style=flat-square)
 
-[Demo](#-demo) · [Características](#-características) · [Sitios soportados](docs/SITIOS.md) · [Arquitectura](docs/ARQUITECTURA.md) · [Roadmap](docs/ROADMAP.md) · [Contribuir](docs/CONTRIBUTING.md)
+[Demo](#-demo) · [Características](#-características-principales) · [Sitios soportados](docs/SITIOS.md) · [Arquitectura](docs/ARQUITECTURA.md) · [Roadmap](docs/ROADMAP.md) · [Contribuir](docs/CONTRIBUTING.md)
 
 ---
 
