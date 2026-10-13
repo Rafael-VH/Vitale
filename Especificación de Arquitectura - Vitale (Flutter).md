@@ -930,9 +930,9 @@ Detección en orden:
 2. `<meta charset>` / `<meta http-equiv="Content-Type">` en los primeros bytes.
 3. Fallback a UTF-8.
 
-> **⏳ DECISIÓN PENDIENTE (bloqueante).** `dart:convert` solo cubre UTF-8, ASCII y Latin-1. El prototipo soporta `windows-1252`, `windows-1251`, `shift_jis`, `euc-jp`, `gbk`, `big5`, `koi8-r` (además de latin1/utf-8). Para `.html` sueltos (no MHTML) hay que cubrirlos. Opciones:
+> **DECISIÓN TOMADA.** `dart:convert` solo cubre UTF-8, ASCII y Latin-1. El prototipo soporta `windows-1252`, `windows-1251`, `shift_jis`, `euc-jp`, `gbk`, `big5`, `koi8-r` (además de latin1/utf-8). Para `.html` sueltos (no MHTML) hay que cubrirlos. Opciones:
 
-- **Opción A (recomendada):** usar un paquete Dart puro (p.ej. `package:encoding`, `package:charset_converter`) para decodificar esos charsets cuando `TextDecoder` falla. Añadirlo como dependencia opcional.
+- **Opción A (recomendada):** usar un paquete Dart puro (p.ej. `package:charset_converter`, `package:charset_converter`) para decodificar esos charsets cuando `TextDecoder` falla. Añadirlo como dependencia opcional.
 - **Opción B:** recortar la lista a lo realmente usado en práctica (cerrar decision con datos) y actualizar el README.
 - **Opción C:** delegar a la plataforma (nativo) — añade complejidad en Web.
 
@@ -1272,4 +1272,4 @@ Se considera la migración completada cuando:
 Decisiones **abiertas** que bloquean partes de la implementación. Cerrarlas (y registrarlas en `AGENTS.md`) antes de codear la capa afectada.
 
 - [ ] **Motor HTML→Markdown (§5.3).** Decidir qué motores usar (mínimo `html2md` como por defecto + opcionales), pinear versiones, definir orden de cascada y si persistir la selección del usuario. Bloquea `MarkdownEngineRegistry` y la capa Data.
-- **Soporte de charsets no-UTF-8 (§5.11).** Decidir entre `package:encoding` u otro paquete Dart puro para `windows-1252`, `windows-1251`, `shift_jis`, `euc-jp`, `gbk`, `big5`, `koi8-r` (o recortar el soporte), pinear versión y actualizar README si aplica. Bloquea `CharsetDetector`.
+- **Soporte de charsets no-UTF-8 (§5.11).** Decidir entre `package:charset_converter` u otro paquete Dart puro para `windows-1252`, `windows-1251`, `shift_jis`, `euc-jp`, `gbk`, `big5`, `koi8-r` (o recortar el soporte), pinear versión y actualizar README si aplica. Bloquea `CharsetDetector`.
