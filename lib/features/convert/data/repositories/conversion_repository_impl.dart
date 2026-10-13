@@ -8,6 +8,7 @@ import '../../domain/engines/markdown_engine_registry.dart';
 import '../../domain/extractors/extractor_registry.dart';
 import '../../domain/repositories/conversion_repository.dart';
 import '../datasources/mhtml_parser.dart';
+import '../../../../core/utils/charset_helper.dart';
 
 class ConversionRepositoryImpl implements ConversionRepository {
   final MarkdownEngineRegistry engineRegistry;
@@ -70,6 +71,6 @@ class ConversionRepositoryImpl implements ConversionRepository {
   }
 
   Future<String> _decode(List<int> bytes) async {
-    return String.fromCharCodes(bytes);
+    return await CharsetHelper.decode(bytes);
   }
 }
