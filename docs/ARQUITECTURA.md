@@ -158,7 +158,7 @@ Cada capa se traduce directamente a Dart:
 | `extractors/<sitio>.js` | Una clase `Extractor` por sitio en `data/extractors/` |
 | `platform.js` | `PlatformProvider` en `shared/providers/` |
 | `site-detector.js` | `ConversionRepositoryImpl` |
-| `mdream-loader.js` | `MarkdownEngineDataSource` |
+| `mdream-loader.js` | `MarkdownEngineRegistry` + `Html2mdEngine` |
 | `download-modal.js` | Widget `DownloadDialog` |
 | `convert-panel.js` | `ConvertPage` + `ConvertController` |
 | `assist-panel.js` | `AssistPage` + `AssistController` |

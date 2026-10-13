@@ -99,6 +99,7 @@ lib/
 │   │   └── supported_formats.dart              # Extensiones y MIME types soportados
 │   ├── errors/
 │   │   ├── failures.dart                       # Jerarquía de fallos del dominio
+│   │   ├── result.dart                         # Result<T> (Ok/Err) sin dependencias externas
 │   │   └── exceptions.dart                     # Excepciones de la capa Data
 │   ├── theme/
 │   │   ├── app_theme.dart                      # Tema oscuro principal
@@ -121,7 +122,11 @@ lib/
 │       │   │   ├── conversion_result.dart      # Output: markdown + metadatos
 │       │   │   ├── mhtml_document.dart         # Representación de MHTML parseado
 │       │   │   ├── site_key.dart               # Identificador del sitio detectado
-│       │   │   └── extractor_config.dart       # Configuración de un extractor
+│       │   │   ├── extractor_config.dart       # Configuración de un extractor
+│       │   │   └── engine_info.dart            # EngineId + EngineOutput
+│       │   ├── engines/
+│       │   │   ├── markdown_engine.dart        # Puerto: un motor HTML→Markdown
+│       │   │   └── markdown_engine_registry.dart # Puerto: registro + fallback en cascada
 │       │   ├── repositories/
 │       │   │   ├── conversion_repository.dart  # Interfaz: HTML → Markdown
 │       │   │   ├── file_repository.dart        # Interfaz: leer/escribir archivos
@@ -139,8 +144,12 @@ lib/
 │       ├── data/
 │       │   ├── datasources/
 │       │   │   ├── mhtml_parser_datasource.dart       # Parsing crudo de MHTML
-│       │   │   ├── markdown_engine_datasource.dart    # Wrapper del motor
 │       │   │   └── site_detector_datasource.dart      # Extrae URL del MHTML
+│       │   ├── engines/
+│       │   │   ├── html2md_engine.dart                # Motor por defecto (paquete html2md)
+│       │   │   ├── mdream_js_engine.dart              # Reservado (solo Web)
+│       │   │   ├── html_to_markdown_rs_engine.dart    # Reservado (solo móvil, Rust)
+│       │   │   └── markdown_engine_registry_impl.dart # Registro + cascada de fallback
 │       │   ├── extractors/                            # Un archivo por sitio
 │       │   │   ├── extractor.dart                     # Clase base de extractores
 │       │   │   ├── extractor_registry.dart            # Registro central
@@ -167,7 +176,8 @@ lib/
 │       └── presentation/
 │           ├── controllers/
 │           │   ├── convert_controller.dart            # Estado: idle, loading, success, error
-│           │   └── download_controller.dart           # Estado del modal de descarga
+│           │   ├── download_controller.dart           # Estado del modal de descarga
+│           │   └── providers.dart                     # Composition root (Riverpod): wiring de dependencias
 │           ├── pages/
 │           │   └── convert_page.dart                  # Pantalla principal
 │           └── widgets/
@@ -178,6 +188,7 @@ lib/
 │               ├── download_dialog.dart               # Modal de nombre de archivo
 │               ├── status_banner.dart                 # Barra de estado superior
 │               ├── site_badge.dart                    # Pill del sitio detectado
+│               ├── engine_selector.dart               # Selector de motor de conversión
 │               └── platform_instructions.dart         # Pasos para Android / iOS / Web
 │
 ├── shared/                                     # Recursos compartidos entre features
@@ -198,6 +209,11 @@ lib/
 1. Crear un archivo `lib/features/convert/data/extractors/<sitio>_extractor.dart`.
 2. Registrarlo en el `ExtractorRegistryImpl`.
 3. Nada más. El resto del sistema lo detecta automáticamente.
+
+**Regla de extensibilidad (motores de conversión)**: para añadir un motor nuevo, solo se debe:
+1. Crear un archivo `lib/features/convert/data/engines/<motor>_engine.dart` que implemente `MarkdownEngine` (§4.8).
+2. Registrarlo en el composition root (§6.5), en el orden de preferencia deseado.
+3. Nada más. El registro lo incluye en la cascada de fallback.
 
 ---
 
@@ -239,6 +255,7 @@ class ConversionResult {
   final SiteKey siteKey;
   final String? originUrl;
   final ExtractionMethod method;
+  final EngineId engineId;
 
   const ConversionResult({
     required this.markdown,
@@ -246,6 +263,7 @@ class ConversionResult {
     required this.markdownLength,
     required this.wasMhtml,
     required this.wasFiltered,
+    required this.engineId,
     this.mhtmlParts,
     this.filterInfo,
     this.siteKey = SiteKey.unknown,
@@ -316,7 +334,7 @@ class ExtractorConfig {
 ```dart
 // lib/features/convert/domain/repositories/conversion_repository.dart
 abstract class ConversionRepository {
-  Future<ConversionResult> convert(SourceInput input);
+  Future<Result<ConversionResult>> convert(SourceInput input, {EngineId? preferredEngine});
   String? extractHtmlFromMhtml(String raw);
   PreparedHtml prepareHtml(String rawInput);
 }
@@ -387,7 +405,8 @@ class ConvertHtmlToMarkdown {
   final ConversionRepository repository;
   ConvertHtmlToMarkdown(this.repository);
 
-  Future<ConversionResult> call(SourceInput input) => repository.convert(input);
+  Future<Result<ConversionResult>> call(SourceInput input, {EngineId? preferredEngine}) =>
+      repository.convert(input, preferredEngine: preferredEngine);
 }
 ```
 
@@ -398,6 +417,128 @@ Los demás casos de uso siguen el mismo patrón:
 - `LoadFileAsText` → usa `FileRepository.pickFile()`
 - `SaveMarkdownFile` → usa `FileRepository.saveMarkdown()`
 - `ShareMarkdownFile` → usa `FileRepository.shareMarkdown()`
+
+### 4.7. Fallos y propagación de errores
+
+Regla única y definitiva (reemplaza la ambigüedad anterior de "`Result`/`Either` o `sealed class`"):
+
+- **Los fallos esperados NO se lanzan: se devuelven como datos.** `throw` queda reservado para errores de programación (bugs), nunca para flujos de negocio.
+- La jerarquía de fallos vive en `lib/core/errors/failures.dart`:
+
+```dart
+// lib/core/errors/failures.dart
+sealed class Failure {
+  final String message;
+  const Failure(this.message);
+}
+
+class MhtmlParseFailure extends Failure {
+  const MhtmlParseFailure([super.message = 'No se pudo leer el archivo MHTML.']);
+}
+
+class EmptyInputFailure extends Failure {
+  const EmptyInputFailure([super.message = 'El contenido está vacío.']);
+}
+
+class UnsupportedFormatFailure extends Failure {
+  const UnsupportedFormatFailure([super.message = 'Formato no soportado.']);
+}
+
+class ConversionFailure extends Failure {
+  const ConversionFailure([super.message = 'Falló la conversión a Markdown.']);
+}
+
+class FileReadFailure extends Failure {
+  const FileReadFailure([super.message = 'No se pudo leer el archivo.']);
+}
+
+class SaveFailure extends Failure {
+  const SaveFailure([super.message = 'No se pudo guardar el archivo.']);
+}
+
+class EngineUnavailableFailure extends Failure {
+  const EngineUnavailableFailure([super.message = 'No hay ningún motor de conversión disponible en esta plataforma.']);
+}
+
+class AllEnginesFailedFailure extends Failure {
+  const AllEnginesFailedFailure([super.message = 'Ningún motor pudo convertir el contenido.']);
+}
+```
+
+- El tipo de retorno de los métodos que pueden fallar es `Result<T>`, un `sealed class` mínimo **sin dependencias externas** (no se usa `dartz` ni `fpdart`):
+
+```dart
+// lib/core/errors/result.dart
+sealed class Result<T> {
+  const Result();
+}
+
+class Ok<T> extends Result<T> {
+  final T value;
+  const Ok(this.value);
+}
+
+class Err<T> extends Result<T> {
+  final Failure failure;
+  const Err(this.failure);
+}
+```
+
+- **Capa Data**: atrapa las excepciones técnicas (`exceptions.dart`, p. ej. `MhtmlFormatException`) y las **traduce a un `Failure`** antes de devolver `Err(failure)`. Ninguna excepción técnica cruza hacia el dominio.
+- **Casos de uso**: devuelven `Result<T>` tal cual (delegan). No traducen ni capturan.
+- **Presentación**: consume el `Result` y, en `Err`, mapea `failure.message` al estado de UI (`ConvertFailure`). El mapeo `Failure` → texto de UI ocurre SOLO aquí.
+
+### 4.8. Contratos del motor de conversión (seleccionable)
+
+El motor HTML→Markdown es **intercambiable**. El dominio define dos puertos; la capa Data provee las implementaciones y la cascada de fallback. El detalle de los motores concretos está en §5.3.
+
+```dart
+// lib/features/convert/domain/entities/engine_info.dart
+enum EngineId { html2md, mdreamJs, htmlToMarkdownRs }
+
+class EngineOutput {
+  final String markdown;
+  final EngineId engineId;        // el motor que efectivamente convirtió
+  final List<EngineId> attempted; // orden probado (principal + fallbacks)
+  const EngineOutput({
+    required this.markdown,
+    required this.engineId,
+    this.attempted = const [],
+  });
+}
+```
+
+```dart
+// lib/features/convert/domain/engines/markdown_engine.dart
+abstract class MarkdownEngine {
+  EngineId get id;
+  /// Nombre para mostrar al usuario (UI de selección).
+  String get label;
+  /// ¿Está disponible en la plataforma actual? (dependencias nativas, etc.)
+  bool get isAvailable;
+  /// Convierte HTML a Markdown. `Err` si este motor no puede procesar el input.
+  Result<String> convert(String html);
+}
+```
+
+```dart
+// lib/features/convert/domain/engines/markdown_engine_registry.dart
+abstract class MarkdownEngineRegistry {
+  /// Todos los motores registrados (disponibles o no). Para la UI de selección.
+  List<MarkdownEngine> get engines;
+  /// Solo los disponibles en la plataforma actual, en orden de preferencia.
+  List<MarkdownEngine> get availableEngines;
+  MarkdownEngine? engineById(EngineId id);
+  /// Convierte con el motor preferido y, si falla o no está disponible,
+  /// cae en cascada al siguiente disponible. Sin `preferred`, usa el orden por defecto.
+  Result<EngineOutput> convert(String html, {EngineId? preferred});
+}
+```
+
+Reglas:
+- La **presentación nunca importa un motor concreto**: depende solo de `MarkdownEngineRegistry`.
+- El **orden de preferencia** lo define el registro (§5.3); el usuario puede sobreescribirlo con `preferred`.
+- La **cascada** es automática: `Err` o salida vacía → probar el siguiente motor.
 
 ---
 
@@ -448,27 +589,120 @@ Método público:
 String? extractOriginUrl(String mhtml);
 ```
 
-### 5.3. `MarkdownEngineDataSource`
+### 5.3. Motores de conversión (intercambiables con cascada)
 
-Envolver el motor de conversión. **Decisión técnica pendiente**: el motor original es `mdream` (Rust/WASM). En Flutter hay tres caminos:
+El objetivo es **replicar lo esencial del comportamiento de `@mdream/js` (htmlToMarkdown → string)**, pero permitir que el usuario elija o que, ante fallo, el sistema pruebe otro motor en orden de preferencia.
 
-- **Opción A — Paquete Dart equivalente**: buscar en `pub.dev` un conversor HTML→Markdown maduro (por ejemplo `html2md` o `turndown_dart`). Es la opción más limpia y funciona en Android, iOS y Web.
-- **Opción B — Ejecutar mdream vía JS (solo Web)**: en Web se puede cargar el bundle de mdream directamente. En móvil esto requiere `flutter_js`, que añade complejidad.
-- **Opción C — Implementar conversor propio**: sólo si las dos anteriores fallan.
+Cada motor implementa el puerto `MarkdownEngine` (§4.8). El registro `MarkdownEngineRegistry` ejecuta, para el input dado, el motor **preferido**; si este **falla** (devuelve `Err` o resultado vacío), prueba el **siguiente disponible**.
 
-**Recomendación**: usar un paquete Dart puro (Opción A) porque funciona en las tres plataformas objetivo sin código condicional.
+#### 5.3.1. Motores recomendados
 
-Interfaz pública:
+| EngineId | Implementación (data/engines) | Plataforma | Estado | Notas |
+|---|---|---|---|---|
+| `html2md` | `html2md_engine.dart` | **Web, Android, iOS** | **Recomendado (por defecto)** | Paquete Dart puro: `package:html2md`. Cubre "Dart puro en 3 plataformas" sin código condicional. Fuentes de la tabla de opciones = filas de la spec (punto 6). Firma: `String convert(Object input, {Map<String,String>? styleOptions,...})`. |
+| `mdreamJs` | `mdream_js_engine.dart` | **Web** | **Opcional (futuro)** | Envoltorio a `@mdream/js` importado vía `package:web`/JS interop. Solo disponible en Web. Úsalo si se quiere acercar al output exacto del prototipo. |
+| `htmlToMarkdownRs` | `html_to_markdown_rs_engine.dart` | **Android, iOS** | **Opcional (futuro)** | Envoltorio a `html_to_markdown_rust`/`h2m` vía FFI. Solo móvil. Requiere prebuilt nativos. Reservado, **no bloqueante**. |
+
+#### 5.3.2. Orden por defecto y cascada
+
+- **Defecto**: `html2md` primero (Dart puro, multi-plataforma).
+- **Fallback**: si `html2md` no está disponible o falla para ese HTML, caer a un motor específico de plataforma (si existe y está disponible). 
+- **Cascada**: si **todos** fallan → `AllEnginesFailedFailure`.
+- La UI permite cambiar el `preferredEngine` (persistido en `SharedPreferences`), pero el fallback siempre ocurre.
+
+#### 5.3.3. Implementación: `MarkdownEngineRegistryImpl`
 
 ```dart
-abstract class MarkdownEngine {
-  String convert(String html);
+// lib/features/convert/data/engines/markdown_engine_registry_impl.dart
+class MarkdownEngineRegistryImpl implements MarkdownEngineRegistry {
+  final List<MarkdownEngine> _engines;
+  MarkdownEngineRegistryImpl(this._engines);
+
+  @override
+  List<MarkdownEngine> get engines => List.unmodifiable(_engines);
+  @override
+  List<MarkdownEngine> get availableEngines => engines.where((e) => e.isAvailable).toList();
+
+  @override
+  MarkdownEngine? engineById(EngineId id) => engines.firstWhereOrNull((e) => e.id == id);
+
+  @override
+  Result<EngineOutput> convert(String html, {EngineId? preferred}) {
+    if (html.trim().isEmpty) return Err(EmptyInputFailure());
+    final order = _buildOrder(preferred);
+    if (order.isEmpty) return Err(EngineUnavailableFailure());
+    final attempted = <EngineId>[];
+    for (final e in order) {
+      attempted.add(e.id);
+      final r = e.convert(html);
+      if (r is Ok<String> && r.value.trim().isNotEmpty) {
+        return Ok(EngineOutput(markdown: r.value, engineId: e.id, attempted: attempted));
+      }
+      // si devuelve Err o vacío, probar siguiente
+    }
+    return Err(AllEnginesFailedFailure());
+  }
+
+  List<MarkdownEngine> _buildOrder(EngineId? preferred) {
+    final available = availableEngines;
+    if (preferred == null) return available;
+    final p = engineById(preferred);
+    if (p == null || !p.isAvailable) return available;
+    return [p, ...available.where((e) => e.id != p.id)];
+  }
 }
 ```
 
-Sin importar la opción elegida, el resto del sistema no debe saber cuál se usa.
+#### 5.3.4. Implementación de `html2md_engine.dart`
 
-### 5.4. `QuotedPrintableDecoder`
+Ajustar `styleOptions` para acercarse al estilo minimalista esperado (manteniendo legible). Los valores por defecto son razonables, sin romper el flujo.
+
+```dart
+// lib/features/convert/data/engines/html2md_engine.dart
+class Html2mdEngine implements MarkdownEngine {
+  @override
+  EngineId get id => EngineId.html2md;
+  @override
+  String get label => 'html2md (Dart puro)';
+  @override
+  bool get isAvailable => true; // paquete Dart puro
+
+  @override
+  Result<String> convert(String html) {
+    try {
+      final md = html2md.convert(html, styleOptions: const {
+        'headingStyle': 'atx',
+        'hr': '- - -',
+        'bulletListMarker': '-',
+        'codeBlockStyle': 'fenced',
+        'fence': '```',
+        'emDelimiter': '*',
+        'strongDelimiter': '**',
+        'linkStyle': 'inlined',
+      });
+      if (md.trim().isEmpty) return Err(ConversionFailure());
+      return Ok(md);
+    } catch (_) {
+      return Err(ConversionFailure());
+    }
+  }
+}
+```
+
+> Notas: `html2md.convert` toma `Object input` (String). No requiere inicialización asíncrona. El paquete es puro Dart → válido en Web/Android/iOS.
+
+#### 5.3.5. Requisitos para los motores reservados
+
+- `mdreamJsEngine`: envolver `@mdream/js` vía `dart:js_interop` / `package:web`. Implementar `isAvailable = kIsWeb`. No ejecutar en móvil.
+- `htmlToMarkdownRsEngine`: envolver `h2m`/`html_to_markdown_rust` (FFI). Inicializar puente una sola vez (p.ej. `RustLib.init()`). Solo móvil (`kIsWeb == false`); chequear disponibilidad. No bloqueante en carga si se hace correctamente.
+
+#### 5.3.6. Datos de decisión registrados
+
+La elección efectiva (paquete, versión, orden, motores reservados y por qué) debe registrarse en **`AGENTS.md`** al cerrar §14, junto con la fecha y quién lo cerró.
+
+---
+
+### 5.4. `QuotedPrintableDecoder` (sin cambios mayores)
 
 Puerto de `decodeQuotedPrintable` del JS. Dart no incluye decoder nativo.
 
@@ -609,19 +843,19 @@ SourceInput
 CharsetDetector.readFileSmart() → decodifica el archivo
   ↓
 MhtmlParserDataSource.extract() → si es MHTML, extrae el HTML
+   ↓
+  SiteDetectorDataSource.extractOriginUrl() → obtiene la URL
   ↓
-SiteDetectorDataSource.extractOriginUrl() → obtiene la URL
+  ExtractorRegistryImpl.detectFromUrl() → devuelve SiteKey
   ↓
-ExtractorRegistryImpl.detectFromUrl() → devuelve SiteKey
+  ExtractorRegistryImpl.extractMainContent() → aplica el extractor
   ↓
-ExtractorRegistryImpl.extractMainContent() → aplica el extractor
+  MarkdownEngineRegistry.convert(html, preferred) → convierte con cascada a Markdown
   ↓
-MarkdownEngineDataSource.convert() → convierte a Markdown
-  ↓
-ConversionResult (con siteKey, method, originUrl incluidos)
+  ConversionResult (con siteKey, method, originUrl, engineId incluidos)
 ```
 
-Manejo de errores: lanzar `Failure` específicos (`MhtmlParseFailure`, `EmptyInputFailure`, `ConversionFailure`, `UnsupportedFormatFailure`) que la capa de presentación pueda traducir a mensajes.
+**Manejo de errores** (ver §4.7): `ConversionRepositoryImpl` atrapa las excepciones técnicas y devuelve `Err(Failure)` — `MhtmlParseFailure`, `EmptyInputFailure`, `UnsupportedFormatFailure`, `ConversionFailure`. Ninguna excepción técnica cruza hacia el dominio.
 
 ### 5.9. `FileRepository` — Implementaciones por plataforma
 
@@ -677,11 +911,48 @@ Usar `Clipboard.getData` y `Clipboard.setData` de `services.dart`. Funciona sin 
 
 ---
 
+### 5.11. `CharsetDetector`
+
+Puerto de `prototipe/js/core/charset.js`. Lee los bytes de un archivo y decodifica el texto detectando el charset.
+
+Contrato:
+
+```dart
+// lib/core/utils/charset_detector.dart
+abstract class CharsetDetector {
+  /// Decodifica bytes a texto detectando el charset (BOM → <meta charset> → UTF-8).
+  String decode(List<int> bytes);
+}
+```
+
+Detección en orden:
+1. BOM (`UTF-8`, `UTF-16 LE/BE`) si está presente.
+2. `<meta charset>` / `<meta http-equiv="Content-Type">` en los primeros bytes.
+3. Fallback a UTF-8.
+
+> **⏳ DECISIÓN PENDIENTE (bloqueante).** `dart:convert` solo cubre UTF-8, ASCII y Latin-1. El prototipo soporta `windows-1252`, `windows-1251`, `shift_jis`, `euc-jp`, `gbk`, `big5`, `koi8-r` (además de latin1/utf-8). Para `.html` sueltos (no MHTML) hay que cubrirlos. Opciones:
+
+- **Opción A (recomendada):** usar un paquete Dart puro (p.ej. `package:encoding`, `package:charset_converter`) para decodificar esos charsets cuando `TextDecoder` falla. Añadirlo como dependencia opcional.
+- **Opción B:** recortar la lista a lo realmente usado en práctica (cerrar decision con datos) y actualizar el README.
+- **Opción C:** delegar a la plataforma (nativo) — añade complejidad en Web.
+
+**Criterio:** Mantenibilidad + "Dart puro" si es posible. Al cerrar, registrar paquete + versión en `AGENTS.md`.
+
+---
+
 ## 6. Capa de Presentación
 
 ### 6.1. Gestión de estado
 
-**Riverpod** (versión 2 o superior) es la opción recomendada. Alternativa: Bloc. El agente debe elegir una y ser consistente.
+**Estado: Riverpod 3.x (decisión cerrada).** No se usa Bloc. Puntos obligatorios:
+
+- Dependencia: `flutter_riverpod` **3.x**. Verificar la última versión con `flutter pub outdated` antes de fijarla. **No** se usa `StateNotifierProvider` ni `StateProvider` (son legacy en 3.x, viven en `package:riverpod/legacy.dart`); se usa `Notifier`/`AsyncNotifier`.
+- **Sin codegen**: providers manuales (sin `riverpod_generator`/`build_runner`). Agregar codegen sólo si se justifica.
+- `ProviderScope` en la raíz del árbol (`runApp(const ProviderScope(child: App()))`).
+- `ref.watch` sólo dentro de `build`; `ref.read` para acciones puntuales (callbacks).
+- Los widgets que consumen providers extienden `ConsumerWidget` (o `ConsumerStatefulWidget`) y usan el `WidgetRef` del `build`.
+
+El controlador de conversión es un **`Notifier<ConvertState>`** (no `AsyncNotifier`: el estado ya modela loading/success/error explícitamente):
 
 ```dart
 // lib/features/convert/presentation/controllers/convert_controller.dart
@@ -695,12 +966,26 @@ class ConvertSuccess extends ConvertState {
   const ConvertSuccess(this.result);
 }
 class ConvertFailure extends ConvertState {
-  final String message;
+  final String message; // traducido desde Failure (§4.7)
   const ConvertFailure(this.message);
 }
+
+class ConvertController extends Notifier<ConvertState> {
+  @override
+  ConvertState build() => const ConvertIdle();
+
+  Future<void> convertFromFile() async { /* pickFile → convert → map Result → ConvertState */ }
+  Future<void> convertFromPasted(String html) async { /* idem desde HTML pegado */ }
+  void clear() => state = const ConvertIdle();
+}
+
+final convertControllerProvider =
+    NotifierProvider<ConvertController, ConvertState>(ConvertController.new);
 ```
 
-El controlador expone métodos: `convertFromFile()`, `convertFromPasted()`, `clear()`.
+El controlador es un **adapter humilde**: no decide reglas de negocio, sólo traduce `Result` → `ConvertState` y delega en los casos de uso. El mapeo `Failure` → mensaje ocurre aquí (§4.7).
+
+El estado incluye el `SiteKey` detectado en `ConvertSuccess`, y la UI lo consume para renderizar el pill del sitio.
 
 El estado incluye el `SiteKey` detectado en `ConvertSuccess`, y la UI lo consume para renderizar el pill del sitio.
 
@@ -734,6 +1019,62 @@ Portar los colores y estilos del `index.html` a `app_theme.dart` con `ThemeData.
 - Éxito: `#34d399` — Error: `#f87171` — Warn: `#fbbf24`
 
 Fuentes: `Inter` para UI, `JetBrains Mono` o `Fira Code` para bloques de código y nombres de archivo.
+
+---
+
+### 6.5. Providers y Composition Root (Riverpod)
+
+Riverpod **es** el mecanismo de inyección de dependencias del proyecto. El ensamblado de implementaciones contra interfaces ocurre en **un solo lugar**: el archivo de providers de la feature.
+
+- **Ubicación**: los providers de infraestructura/ensamblado viven en `lib/shared/providers/`; los de una feature, junto a su controlador (`lib/features/convert/presentation/controllers/providers.dart`). El punto de composición global es `main.dart` (crea el `ProviderScope`) + `app.dart`.
+
+Cadena de dependencias (interfaz → implementación, nunca al revés):
+
+```
+MarkdownEngineRegistry  ←  [Html2mdEngine, MdreamJsEngine?, HtmlToMarkdownRsEngine?]  (orden configurable)
+MhtmlParserDataSource
+SiteDetectorDataSource
+ExtractorRegistryImpl     ┘  (registra los 7 extractores)
+FileRepositoryMobile/Web  ──→ FileRepository (delegador)
+→ ConversionRepositoryImpl → ConvertHtmlToMarkdown
+```
+
+Los providers exponen SIEMPRE interfaces del dominio, no implementaciones:
+
+```dart
+// lib/features/convert/presentation/controllers/providers.dart
+final enginesProvider = Provider<List<MarkdownEngine>>((ref) {
+  final engines = <MarkdownEngine>[
+    Html2mdEngine(),
+    // MdreamJsEngine() solo si kIsWeb — inyectar según platform
+    // HtmlToMarkdownRsEngine() solo si móvil
+  ];
+  // filtrar los no disponibles si se desea, o mantener para UI
+  return engines;
+});
+
+final engineRegistryProvider = Provider<MarkdownEngineRegistry>((ref) {
+  return MarkdownEngineRegistryImpl(ref.read(enginesProvider));
+});
+
+final conversionRepositoryProvider = Provider<ConversionRepository>((ref) {
+  return ConversionRepositoryImpl(
+    mhtmlParser: ref.read(mhtmlParserProvider),
+    siteDetector: ref.read(siteDetectorProvider),
+    extractors: ref.read(extractorRepositoryProvider),
+    engineRegistry: ref.read(engineRegistryProvider),
+  );
+});
+
+final convertHtmlToMarkdownProvider = Provider<ConvertHtmlToMarkdown>((ref) {
+  return ConvertHtmlToMarkdown(ref.read(conversionRepositoryProvider));
+});
+```
+
+Reglas:
+- Cada clase recibe sus dependencias por constructor; el wiring vive en providers, no dentro de las clases.
+- `main.dart` sólo crea el `ProviderScope`; `app.dart` arma `MaterialApp`.
+- En tests, inyectar fakes con `ProviderScope(overrides: [...])` y `ProviderContainer.test()`.
 
 ---
 
@@ -774,7 +1115,7 @@ El agente debe seguir estas convenciones para mantener consistencia:
 3. **Variables y métodos**: `camelCase`. Privados con `_` prefijo.
 4. **Constantes**: `lowerCamelCase` para `const`, `SCREAMING_SNAKE_CASE` para verdaderas constantes globales.
 5. **Imports**: agrupar por `dart:`, `package:`, relativos, con línea en blanco entre grupos.
-6. **Errores**: usar `Result`/`Either` o el patrón `sealed class` para estados, y `throw` sólo para errores de programación.
+6. **Errores**: los fallos esperados se modelan como datos — `sealed class Failure` (dominio) y `Result<T>` para devolverlos; los estados de UI usan `sealed class`. `throw` sólo para errores de programación (bugs). Ver §4.7.
 7. **Comentarios**: docstrings `///` en todas las clases y métodos públicos. Nada de comentarios obvios.
 8. **Linter**: respetar `flutter_lints` + añadir `analysis_options.yaml` con reglas estrictas (`prefer_const_constructors`, `always_declare_return_types`, `avoid_print`, etc.).
 
@@ -835,7 +1176,7 @@ El agente debe implementar en este orden para mantener el proyecto siempre compi
 1. **Core**: `errors`, `constants`, `utils`, `theme`. Sin dependencias.
 2. **Domain**: entidades → interfaces → casos de uso.
 3. **Data — Extractores**: `Extractor`, `GenericExtractor`, `ExtractorRegistryImpl`, y cada uno de los 7 extractores específicos.
-4. **Data — Datasources**: `MhtmlParserDataSource`, `SiteDetectorDataSource`, `MarkdownEngineDataSource`.
+4. **Data — Datasources**: `MhtmlParserDataSource`, `SiteDetectorDataSource` + motores en `data/engines/`.
 5. **Data — Repositories**: `ConversionRepositoryImpl`, `ExtractorRepositoryImpl`, `FileRepositoryMobile`, `FileRepositoryWeb`, delegador.
 6. **Presentation**: controladores → widgets → página.
 7. **Bootstrap**: `main.dart` y `app.dart` uniendo todo.
@@ -852,9 +1193,12 @@ El agente puede asumir que el `pubspec.yaml` del proyecto ya contiene (o debe pr
 - `share_plus` — compartir archivos (solo móvil)
 - `html` — parseo de HTML y selectores CSS
 - `html_unescape` — decodificar entidades HTML
-- `flutter_riverpod` (o `flutter_bloc`) — gestión de estado
+- `flutter_riverpod` **3.x** — gestión de estado (decisión cerrada; NO `flutter_bloc`)
 - `web` — para APIs del navegador (solo en compilación web)
-- **Motor de conversión**: elegir según lo indicado en §5.3
+- **Motores de conversión (seleccionables):**
+  - `html2md` — Dart puro. **Recomendado por defecto** para Web + Android + iOS.
+  - `@mdream/js` vía JS interop (`dart:js_interop`/`package:web`) — **solo Web** (reservado, no obligatorio).
+  - `html_to_markdown_rust` o `h2m` — **solo móvil** vía FFI (reservado, no obligatorio).
 
 Si falta alguna, el agente debe **listarla explícitamente en su respuesta antes de usarla** y esperar confirmación del desarrollador.
 
@@ -920,3 +1264,12 @@ Se considera la migración completada cuando:
 - [ ] Un desarrollador nuevo puede añadir un extractor para un sitio nuevo siguiendo solo `docs/SITIOS.md` y `docs/ARQUITECTURA.md`.
 - [ ] La estructura de carpetas coincide con la definida en la sección 3.
 - [ ] Los principios arquitectónicos de la sección 2 se respetan (Presentation → Domain ← Data).
+
+---
+
+## 14. Decisiones Pendientes Antes de Implementar
+
+Decisiones **abiertas** que bloquean partes de la implementación. Cerrarlas (y registrarlas en `AGENTS.md`) antes de codear la capa afectada.
+
+- [ ] **Motor HTML→Markdown (§5.3).** Decidir qué motores usar (mínimo `html2md` como por defecto + opcionales), pinear versiones, definir orden de cascada y si persistir la selección del usuario. Bloquea `MarkdownEngineRegistry` y la capa Data.
+- **Soporte de charsets no-UTF-8 (§5.11).** Decidir entre `package:encoding` u otro paquete Dart puro para `windows-1252`, `windows-1251`, `shift_jis`, `euc-jp`, `gbk`, `big5`, `koi8-r` (o recortar el soporte), pinear versión y actualizar README si aplica. Bloquea `CharsetDetector`.
