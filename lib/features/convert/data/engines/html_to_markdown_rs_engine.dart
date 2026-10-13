@@ -14,6 +14,6 @@ class HtmlToMarkdownRsEngine implements MarkdownEngine {
 
   @override
   Result<String> convert(String html) {
-    return Err(EngineUnavailableFailure(message: 'html_to_markdown.rs solo disponible con FFI (Android/iOS).'));
+    return Err(EngineUnavailableFailure( 'html_to_markdown.rs solo disponible con FFI (Android/iOS).'));
   }
 }

@@ -14,6 +14,6 @@ class MdreamJsEngine implements MarkdownEngine {
 
   @override
   Result<String> convert(String html) {
-    return Err(EngineUnavailableFailure(message: 'mdream.js solo disponible en Web (JS interop).'));
+    return Err(EngineUnavailableFailure('mdream.js solo disponible en Web (JS interop).'));
   }
 }
