@@ -1,163 +1,123 @@
 # Vitale
 
-**Convierte cualquier HTML o MHTML en Markdown limpio, directamente en el navegador.**
+**Convierte páginas web guardadas (HTML o MHTML) en Markdown limpio — sin instalar nada, sin cuentas y sin servidores.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-5eead4.svg?style=flat-square)](LICENSE)
-![Sin dependencias](https://img.shields.io/badge/dependencias-0-818cf8.svg?style=flat-square)
+![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-5eead4.svg?style=flat-square)
 ![Offline-first](https://img.shields.io/badge/offline--first-sí-34d399.svg?style=flat-square)
+![Sin dependencias](https://img.shields.io/badge/dependencias-0-818cf8.svg?style=flat-square)
 ![Optimizado para LLMs](https://img.shields.io/badge/optimizado%20para-LLMs-a78bfa.svg?style=flat-square)
 
-[Demo](#-demo) · [Características](#-características-principales) · [Sitios soportados](docs/SITIOS.md) · [Arquitectura](docs/ARQUITECTURA.md) · [Roadmap](docs/ROADMAP.md) · [Contribuir](docs/CONTRIBUTING.md)
+Vitale toma un archivo `.html` o `.mhtml` (el formato "Guardar página como" de Chrome, Edge, Firefox y Safari) y devuelve un `.md` limpio, sin menús, publicidad ni ruido. Todo el procesamiento ocurre **en tu navegador**: ningún dato sale de tu dispositivo.
 
----
+Sirve para tres cosas: **leer offline** artículos y capítulos, **preparar contenido para LLMs** (el Markdown gasta muchos menos tokens que el HTML crudo) y **archivar** páginas que podrían desaparecer en un formato que sobrevive décadas.
 
-## 📖 ¿Qué es Vitale?
+## ⚡ Probar en un minuto
 
-**Vitale** es una herramienta web que convierte páginas web guardadas (HTML o MHTML) en archivos Markdown limpios y legibles, **sin instalar nada, sin cuentas, sin servidores**.
+No hace falta instalar nada.
 
-Todo el procesamiento ocurre **localmente en tu navegador**. Ningún dato sale de tu dispositivo.
+1. Clona el repositorio:
 
-Está pensada para tres casos de uso principales:
+   ```bash
+   git clone https://github.com/Rafael-VH/Vitale.git
+   ```
 
-1. **Lectura limpia offline** — Guarda un artículo o capítulo web y léelo después como Markdown sin anuncios, menús ni ruido.
-2. **Preparación de contenido para LLMs** — Los modelos de lenguaje consumen mucho mejor el Markdown que el HTML. Vitale elimina hasta el 90% de tokens innecesarios.
-3. **Archivado personal** — Conserva el contenido textual de páginas que podrían desaparecer, con un formato que sobrevivirá décadas.
+2. Abre `prototipe/index.html` en tu navegador.
+3. Arrastra un `.mhtml` guardado desde tu navegador y pulsa **Convertir a Markdown**.
 
----
+> **Si el motor no carga al abrir con doble clic** (algunos navegadores bloquean `import()` desde `file://`), sirve la carpeta con un servidor local:
+>
+> ```bash
+> cd prototipe
+> python -m http.server 8000
+> ```
+>
+> Luego abre <http://localhost:8000/>.
 
-## ✨ Características principales
+## 📦 Qué hay en este repositorio
+
+El repositorio contiene **dos implementaciones** de Vitale:
+
+| Ruta | Qué es | Estado |
+| --- | --- | --- |
+| `prototipe/` | App web vanilla (HTML + CSS + JS, 20 módulos, sin build) | ✅ En uso — versión 1.0 |
+| `lib/` | Port a Flutter (Android, iOS, Web) con Clean Architecture + Riverpod | 🚧 En desarrollo — versión 2.0 |
+| `docs/` | Documentación del proyecto | — |
+
+El prototipo web es la **referencia funcional**: define el comportamiento que el port a Flutter reproduce.
+
+## ✨ Características
 
 ### Conversión
 
-- **HTML → Markdown** con [mdream](https://github.com/harlan-zw/mdream), un conversor ultrarrápido escrito en Rust/WASM.
-- **Soporte nativo de MHTML/MHT**, el formato que genera Chrome, Edge, Firefox y Safari al usar "Guardar página como".
-- **Detección de codificación** — lee el `<meta charset>` del HTML y decodifica correctamente UTF-8, ISO-8859-1, Windows-1252, Shift-JIS, GBK y más.
+- **HTML → Markdown** con [mdream](https://github.com/harlan-zw/mdream) (`@mdream/js`, cargado desde CDN).
+- **Soporte nativo de MHTML/MHT**, el formato de "Guardar página como" de los navegadores.
+- **Detección de charset**: UTF-8, ISO-8859-1, Windows-1252, Shift-JIS, GBK y más.
+- **Descarga con BOM UTF-8**, para que los acentos se vean bien en cualquier visor.
 
-### Extracción inteligente por sitio
+### Extracción por sitio
 
-- **Detección automática del sitio de origen** a partir de la URL incrustada en el MHTML.
-- **Extractores específicos** para sitios con estructuras conocidas, mucho más precisos que el extractor genérico.
-- **Fallback en cascada** — si un extractor específico falla, se cae al genérico sin romper la conversión.
-- **Pill visual** en la barra de estado que muestra qué sitio se ha reconocido.
+- **Detección automática del sitio** a partir de la URL incrustada en el MHTML.
+- **Extractores específicos** para sitios conocidos (ver tabla), mucho más precisos que el genérico.
+- **Fallback en cascada**: extractor específico → genérico → HTML completo. La conversión nunca falla.
+- **Pill de sitio** en la barra de estado mostrando qué sitio se reconoció.
 
-→ [Ver la lista completa de sitios soportados](docs/SITIOS.md)
+### Entrada y salida
 
-### Entrada de datos
+- Panel de carga con drag & drop, pegado desde el portapapeles y asistente para URLs.
+- Modal para elegir el nombre del archivo antes de descargar.
+- Copiado directo al portapapeles (Obsidian, Notion, VS Code…).
 
-- **Panel de carga unificado** con drag & drop y selector nativo de archivos.
-- **Pegado desde el portapapeles** con un solo botón.
-- **Asistente para URLs** que te guía paso a paso para obtener el HTML de una página web.
+### Privacidad
 
-### Salida
+- Cero servidores, cero telemetría, cero cuentas. Funciona offline después de la primera carga.
 
-- **Descarga como `.md`** con codificación UTF-8 y BOM, garantizando que los acentos se vean correctamente en cualquier visor.
-- **Nombre de archivo editable** — modal que sugiere un nombre y permite cambiarlo antes de guardar.
-- **Copiado al portapapeles** para pegar directamente en Obsidian, Notion, VS Code o cualquier editor.
+## 🌐 Sitios soportados
 
-### Diseño y privacidad
+| Sitio | Dominio |
+| --- | --- |
+| Fanfiction.net | `fanfiction.net` |
+| Archive of Our Own | `archiveofourown.org` |
+| Webnovel | `webnovel.com` |
+| Royal Road | `royalroad.com` |
+| Wikipedia | `wikipedia.org` |
+| Substack | `substack.com` |
+| Blogger | `blogspot.com` |
 
-- **Interfaz oscura moderna** con microinteracciones y estados visuales claros.
-- **Responsive** — funciona igual de bien en móvil que en escritorio.
-- **Cero servidores, cero telemetría, cero cuentas.** Todo el procesamiento es local.
-- **Funciona offline** después de la primera carga.
-
----
-
-## 🚀 Demo
-
-**No necesitas clonar nada para probarlo.** Puedes abrirlo de dos formas:
-
-### Opción 1: clonar el repositorio
-
-```bash
-git clone https://github.com/tu-usuario/vitale.git
-cd vitale
-# Abre prototipe/index.html en tu navegador
-```
-
-### Opción 2: descargar el ZIP
-
-Ve a la sección **Releases** del repositorio, descarga el ZIP más reciente, descomprímelo y abre `prototipe/index.html` con doble clic.
-
-### Servidor local (recomendado para desarrollo)
-
-Si vas a modificar el código, sirve la carpeta con un servidor local:
-
-```bash
-cd prototipe
-python -m http.server 8000
-# Abre http://localhost:8000/ en tu navegador
-```
-
-Funciona en **Chrome, Edge, Firefox, Safari, Brave, Vivaldi, Opera** y cualquier navegador moderno basado en Chromium, Gecko o WebKit.
-
----
-
-## 📘 Cómo usar
-
-### Convertir un archivo local (HTML o MHTML)
-
-1. **Obtén el archivo HTML/MHTML**:
-   - **Escritorio**: abre la página, pulsa `Ctrl+S` y guarda como "Página web, solo HTML" o "Página web, completa".
-   - **Android**: abre la página en Chrome → menú `⋮` → **"Descargar página"**. Se guardará como `.mhtml`.
-   - **iOS**: abre la página en Safari → botón Compartir → **"Guardar en Archivos"**.
-2. **Ábrelo en Vitale**: arrastra el archivo al panel de carga o pulsa el panel y elige el archivo.
-3. Pulsa **"Convertir a Markdown"**.
-4. Pulsa **"Descargar .md"** y elige el nombre del archivo.
-
-Si el sitio está soportado, verás un pill violeta en la barra de estado indicando el sitio reconocido, y el Markdown resultante contendrá solo el contenido del capítulo.
-
-### Convertir desde una URL
-
-1. Ve a la pestaña **"Obtener de URL"**.
-2. Pega la URL y pulsa **"1. Copiar URL"**.
-3. Sigue las instrucciones específicas de tu plataforma.
-4. Vuelve a la pestaña **"Convertir HTML"** y pega el contenido o arrastra el archivo.
-
-> **Nota sobre CORS**: Vitale no descarga URLs automáticamente. Los navegadores bloquean por seguridad que una página local haga peticiones a dominios externos. Por eso el flujo es manual-asistido, lo cual además lo hace **inmune a protecciones anti-bot como Cloudflare**.
-
----
+Cualquier otro dominio cae al **extractor genérico** (`<article>`, o bloques con clases como `content`, `chapter` o `post`). Lista completa y guía para añadir sitios en [docs/SITIOS.md](docs/SITIOS.md).
 
 ## 🛠️ Tecnología
 
 | Componente | Uso |
-|---|---|
-| [mdream](https://github.com/harlan-zw/mdream) | Motor de conversión HTML → Markdown (Rust/WASM) |
+| --- | --- |
+| [mdream](https://github.com/harlan-zw/mdream) (`@mdream/js`, CDN) | Motor de conversión HTML → Markdown |
 | HTML + CSS + JavaScript vanilla | Interfaz y lógica, sin frameworks |
 | DOMParser + querySelectorAll | Extracción de contenido por sitio |
 | FileReader / TextDecoder | Lectura y decodificación de archivos |
-| Clipboard API + fallback | Pegado y copiado |
 | Blob + URL.createObjectURL | Descarga de archivos |
 
-**Sin dependencias de build, sin npm, sin bundler.**
-
-Para conocer la estructura interna del proyecto, consulta [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md).
-
----
+Sin build, sin npm, sin bundler.
 
 ## 📚 Documentación
 
 | Documento | Contenido |
-|---|---|
-| [docs/SITIOS.md](docs/SITIOS.md) | Lista completa de sitios soportados y guía para añadir nuevos |
+| --- | --- |
 | [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) | Estructura de carpetas, capas y flujo de procesamiento |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Roadmap detallado por versiones |
-| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Cómo contribuir, reportar bugs y añadir extractores |
+| [docs/SITIOS.md](docs/SITIOS.md) | Sitios soportados y guía para añadir un extractor |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Plan de versiones |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Cómo contribuir |
 
----
+## 🗺️ Roadmap
+
+- **v1.0** (actual) — Núcleo de conversión, MHTML, extractores y fallback en cascada.
+- **v1.1** — Más extractores (Wattpad, Medium, Scribble Hub…), soporte EPUB, splitter para RAG.
+- **v2.0** — Port a Flutter (Android, iOS, Web) con integración nativa.
+
+Detalle completo en [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## 🤝 Contribuir
+
+Las contribuciones son bienvenidas. La más común es **añadir un extractor**: se crea un archivo y se registra, nada más. Lee [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) antes de abrir un PR.
 
 ## 📄 Licencia
 
 Distribuido bajo la [Licencia MIT](LICENSE). Puedes usar, modificar y distribuir este software libremente, incluso en proyectos comerciales.
-
----
-
-## 💬 Créditos
-
-- **mdream** por [harlan-zw](https://github.com/harlan-zw) — el motor que hace posible la conversión.
-- **Inspiración** en herramientas como [Pandoc](https://pandoc.org/), [Turndown](https://github.com/mixmark-io/turndown) y [Reader Mode](https://github.com/mozilla/readability).
-- **Comunidad** que reporta bugs, propone mejoras y usa Vitale a diario.
-
----
-
-**Vitale** — *Convierte la web en texto limpio.*
